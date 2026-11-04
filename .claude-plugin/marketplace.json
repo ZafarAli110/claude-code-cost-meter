@@ -1,0 +1,13 @@
+{
+  "name": "claude-code-cost-meter",
+  "owner": {
+    "name": "Zafar Ali"
+  },
+  "description": "The cost meter for Claude Code: live cost, tokens, context and every subagent's cost.",
+  "plugins": [
+    {
+      "name": "cost-meter",
+      "source": "./"
+    }
+  ]
+}

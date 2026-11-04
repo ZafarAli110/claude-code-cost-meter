@@ -1,0 +1,10 @@
+{
+  "name": "cost-meter",
+  "version": "1.0.0",
+  "description": "Live cost, tokens, context window, model calls and every subagent's time and cost, beside the chat and above the prompt",
+  "author": { "name": "Zafar Ali" },
+  "license": "MIT",
+  "repository": "https://github.com/ZafarAli110/claude-code-cost-meter",
+  "keywords": ["cost", "tokens", "usage", "subagents", "status"],
+  "types": "./types/index.d.ts"
+}
