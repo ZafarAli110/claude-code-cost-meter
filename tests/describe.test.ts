@@ -28,7 +28,7 @@ test("the full meter: a header, a row each, and a line per subagent, newest firs
     [
       "cost meter │ ⏱ 18m 04s │ ⚙ main",
       "cost     ●●●●○○○○○○  $4.20/$10.00 est.",
-      "tokens   ●●●●●●●●●○  90% from cache · 3.0M in all",
+      "tokens   ●●●●●●●●●○  90% from cache · 3.0M sent in 41 calls",
       "context  ●●●○○○○○○○  30% 60k of 200k window",
       "calls                41 to the model",
       "agents               3 run · 610k tokens, $1.71 in all",
@@ -60,10 +60,10 @@ test("a cache share just under 100% never reads as 100%", async () => {
 test("the short forms keep a few words per row, with no bars, so they never wrap", async () => {
   expect(meter(base, 10, "two", context).split("\n")).toEqual([
     "cost meter │ ⏱ 18m 04s │ ⚙ main",
-    "$4.20 │ 3.0M tokens │ context 30% │ 41 calls │ 3 agents",
+    "$4.20 │ 3.0M sent │ context 30% │ 41 calls │ 3 agents",
   ]);
   expect(meter(base, 10, "one", context)).toBe(
-    "cost meter │ ⏱ 18m 04s │ ⚙ main │ $4.20 │ 3.0M tokens │ context 30% │ 41 calls │ 3 agents",
+    "cost meter │ ⏱ 18m 04s │ ⚙ main │ $4.20 │ 3.0M sent │ context 30% │ 41 calls │ 3 agents",
   );
 });
 

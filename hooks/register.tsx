@@ -112,8 +112,8 @@ export function rows(m: Meter, budgetUsd: number, context?: Context): Row[] {
       bar: bar(cached),
       value: `${Math.floor(cached * 100)}%`,
       valueColor: "success",
-      detail: `from cache · ${tokens(total)} in all`,
-      brief: `${tokens(total)} tokens`,
+      detail: `from cache · ${tokens(total)} sent in ${m.calls} calls`,
+      brief: `${tokens(total)} sent`,
     },
     {
       label: "context",

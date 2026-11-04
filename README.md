@@ -6,7 +6,7 @@ cache, how full the context window is, the model calls, and every subagent with 
 ```
 cost meter │ ⏱ 18m 04s │ ⚙ security-reviewer
 cost     ●●●●○○○○○○  $4.20/$10.00 est.
-tokens   ●●●●●●●●●○  90% from cache · 3.0M in all
+tokens   ●●●●●●●●●○  90% from cache · 3.0M sent in 41 calls
 context  ●●●○○○○○○○  30% 60k of 200k window
 calls                41 to the model
 agents               3 run · 690k tokens, $1.74 in all
@@ -48,9 +48,12 @@ Ctrl+X then Ctrl+A also collapses and restores the line above the prompt.
 
 - **cost** is Claude Code's own estimate at list price, the same figure `/usage` shows. On a subscription plan it
   is what the work would cost on the API, not what you pay. It turns red once it passes the budget.
-- **tokens** counts every model call since the reset, the main conversation's and every subagent's: input, output,
-  cache reads and cache writes. The bar is the share read from the cache, which is billed at a fraction of the price.
-- **context** is how full the context window was at the last response, as the status line shows it.
+- **tokens** is everything sent to the model and back since the reset, over every call, the main conversation's and
+  every subagent's. Each call sends the whole conversation again, so this total grows far past the context window:
+  35 calls over a conversation of about 60k is about 2M. The bar is the share read from the cache, which is billed at
+  a fraction of the price.
+- **context** is different: how big the conversation is now, against the most one call can hold. That is the one
+  that fills up; near the top, Claude Code summarises older messages to make room.
 - **agents** lists each subagent: running ones first, then the last 20 that finished. A subagent's cost is the cost
   of the model calls it made.
 
