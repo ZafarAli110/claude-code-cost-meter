@@ -213,8 +213,8 @@ export function describe(m: Meter, budgetUsd = 10, mode: Mode = "full", context?
 /** The meter as an element tree: the full rows, or two lines, or one, drawn with the surface's own elements. */
 export async function draw($: EngineInterface, ui: Elements, m: Meter, mode: Mode) {
   const budgetUsd = await read($, budget);
-  // The clock is read at every draw, and a timer redraws once a second, so the time never looks frozen.
-  const top = header(m, await $.clock.now());
+  // While Claude works, the time is read at every draw and a timer redraws once a second; idle, it stays at the last call.
+  const top = header(m, isWorking ? await $.clock.now() : m.updatedAt);
   const all = rows(m, budgetUsd, (await $.session.usage()).context);
   const { Box, Text } = ui;
   const separator = (key: string) => (
@@ -294,12 +294,18 @@ export async function copyMeter($: EngineInterface, surface?: RenderSurface): Pr
 }
 
 let tick: Timer | undefined;
+/** Whether the main conversation is working: the clock ticks only then, and stands still in an idle session. */
+let isWorking = false;
 
 export const register: Register = (on) => {
   on("session.start", async ($, e, next) => {
     // Redraw once a second so the time ticks; a reload starts a new timer and stops the old one.
     tick?.cancel();
-    tick = $.clock.every(1000, () => $.ui.invalidate("ui.render"));
+    tick = $.clock.every(1000, () => {
+      if (isWorking) {
+        $.ui.invalidate("ui.render");
+      }
+    });
     await $.command.register({
       name: COMMAND,
       description:
@@ -411,9 +417,21 @@ export const register: Register = (on) => {
     return started;
   });
 
+  // The main conversation starts a turn: the clock ticks until the turn ends.
+  on("turn.start", async ($, e, next) => {
+    if (!e.agentId) {
+      isWorking = true;
+    }
+    return next(e);
+  });
+
   // A subagent's run ends: it leaves the running list and becomes the last one, with its time and tokens.
   on("turn.complete", async ($, e, next) => {
     const agentId = e.agentId;
+    if (!agentId) {
+      isWorking = false;
+      $.ui.invalidate("ui.render");
+    }
     if (agentId) {
       try {
         const now = await $.clock.now();
