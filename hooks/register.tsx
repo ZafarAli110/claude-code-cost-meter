@@ -293,6 +293,15 @@ export async function copyMeter($: EngineInterface, surface?: RenderSurface): Pr
   return (await $.ui.copy(surface === undefined ? { text } : { text, surface })).isCopied;
 }
 
+/** What every word of the command does: printed when the panel opens, and for a word it does not know. */
+const USAGE = [
+  `/${COMMAND} panel      the full meter beside the chat (/${COMMAND} alone does the same)`,
+  `/${COMMAND} hide       hide the line above the prompt; /${COMMAND} show brings it back`,
+  `/${COMMAND} copy       the full meter on the clipboard, as text`,
+  `/${COMMAND} reset      count from zero, from now`,
+  `/${COMMAND} budget 20  the cost bar is full at $20 (default $10)`,
+].join("\n");
+
 let tick: Timer | undefined;
 /** Whether the main conversation is working: the clock ticks only then, and stands still in an idle session. */
 let isWorking = false;
@@ -309,7 +318,8 @@ export const register: Register = (on) => {
     await $.command.register({
       name: COMMAND,
       description:
-        "Open the cost meter beside the chat; `copy` puts it on the clipboard; `reset`; `budget <dollars>`; `hide` or `show`",
+        "Cost meter: `panel` opens it beside the chat; `hide`/`show` the line above the prompt; `copy`; `reset`; `budget <dollars>`",
+      argumentHint: "[panel | hide | show | copy | reset | budget <dollars>]",
     });
     if ((await read($, meter)) === null) {
       const started = await fresh($);
@@ -332,7 +342,10 @@ export const register: Register = (on) => {
       }
       if (word === "" || word === "panel") {
         const opened = await $.ui.open({ id: PANE, title: "Cost meter", columns: 72, rows: 18 });
-        return { text: opened.isPlaced ? "Cost meter opened." : "The cost meter waits for a wider terminal." };
+        if (!opened.isPlaced) {
+          return { text: "The cost meter panel waits for a wider terminal." };
+        }
+        return { text: `Cost meter panel opened beside the chat.\n${USAGE}` };
       }
       if (word === "budget") {
         const dollars = Number(amount.replace("$", ""));
@@ -353,7 +366,7 @@ export const register: Register = (on) => {
         await update($, isHidden, () => false);
         return { text: "Cost meter reset: counting from now." };
       }
-      return { text: `Unknown: ${word}. Try /${COMMAND}, /${COMMAND} reset, budget 20, hide or show.` };
+      return { text: `Unknown: ${word}.\n${USAGE}` };
     } catch {
       return { text: "The cost meter could not do that." };
     }

@@ -15,8 +15,16 @@ agents               3 run · 690k tokens, $1.74 in all
          architect                  47s   210k tokens  ≈$0.61
 ```
 
-The full meter opens in a panel beside the conversation. A one-line summary sits above the prompt, and grows to the
-full meter when your terminal has the rows for it.
+## Where it shows
+
+It shows in two places:
+
+| Where | When | How |
+| --- | --- | --- |
+| **Above the prompt**, in the chat | on by default, as soon as the plugin is installed | a one-line summary; it grows to the full meter when the terminal has the rows. `/show-meter hide` and `/show-meter show` turn it off and on |
+| **The panel**, beside the chat | only when you run `/show-meter panel` (or just `/show-meter`) | the full meter, every subagent, and a **Copy** button |
+
+Type `/show-meter` and the menu lists every word it takes; `/show-meter panel` also prints them.
 
 ## Install
 
@@ -65,7 +73,7 @@ also takes the plugin out of that project's `.claude/settings.json`. To forget t
 
 | Command | Does |
 | --- | --- |
-| `/show-meter` | opens the full meter beside the conversation, with a **Copy** button at the top |
+| `/show-meter panel` | opens the full meter in a panel beside the chat, with a **Copy** button at the top (`/show-meter` alone does the same) |
 | `/show-meter copy` | puts the full meter on the clipboard as text, to paste into a ticket or a chat |
 | `/show-meter reset` | counts from zero: run it just before a task you want to measure |
 | `/show-meter budget 20` | the cost bar is full at $20 (default $10); remembered across sessions |
