@@ -322,7 +322,7 @@ export const register: Register = (on) => {
         return { text: `Cost meter ${word === "hide" ? "hidden" : "shown"}.` };
       }
       if (word === "" || word === "panel") {
-        const opened = await $.ui.open({ id: PANE, title: "Cost meter", columns: 64 });
+        const opened = await $.ui.open({ id: PANE, title: "Cost meter", columns: 72, rows: 18 });
         return { text: opened.isPlaced ? "Cost meter opened." : "The cost meter waits for a wider terminal." };
       }
       if (word === "budget") {
