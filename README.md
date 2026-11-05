@@ -33,6 +33,34 @@ everyone who works in this repository. Or from a terminal:
 claude plugin install cost-meter --marketplace ZafarAli110/claude-code-cost-meter
 ```
 
+## Update
+
+From a terminal, with no Claude session needed (the same in PowerShell):
+
+```
+claude plugin marketplace update claude-code-cost-meter
+claude plugin update cost-meter@claude-code-cost-meter
+```
+
+The first line fetches the newest list from GitHub; the second installs the newest version. Then restart Claude Code:
+an update takes effect in the next session. Inside a session, type `/plugin`, open **Installed**, pick `cost-meter`
+and choose **Update**, or run the same command with a `!` in front:
+`! claude plugin update cost-meter@claude-code-cost-meter`.
+
+If you installed it for one project (the **project** scope), add `--scope project` to the update, from that project's
+folder. A project install takes priority over a user install there, so an old project copy hides a newer user copy.
+
+## Uninstall
+
+```
+claude plugin uninstall cost-meter@claude-code-cost-meter
+```
+
+That removes the user install. For a project install, run it from the project's folder with `--scope project`; it
+also takes the plugin out of that project's `.claude/settings.json`. To forget the marketplace as well:
+`claude plugin marketplace remove claude-code-cost-meter`. Inside a session: `/plugin`, **Installed**, `cost-meter`,
+**Uninstall**.
+
 ## Use
 
 | Command | Does |
