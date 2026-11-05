@@ -10,9 +10,9 @@ tokens   ●●●●●●●●●○  90% from cache · 3.0M sent in 41 calls
 context  ●●●○○○○○○○  30% 60k of 200k window
 calls                41 to the model
 agents               3 run · 690k tokens, $1.74 in all
-         security-reviewer      running    80k tokens  $0.03
-         verifier                1m 35s   400k tokens  $1.10
-         architect                  47s   210k tokens  $0.61
+         security-reviewer      running    80k tokens  ≈$0.03
+         verifier                1m 35s   400k tokens  ≈$1.10
+         architect                  47s   210k tokens  ≈$0.61
 ```
 
 The full meter opens in a panel beside the conversation. A one-line summary sits above the prompt, and grows to the
@@ -37,7 +37,8 @@ claude plugin install cost-meter --marketplace ZafarAli110/claude-code-cost-mete
 
 | Command | Does |
 | --- | --- |
-| `/show-meter` | opens the full meter beside the conversation |
+| `/show-meter` | opens the full meter beside the conversation, with a **Copy** button at the top |
+| `/show-meter copy` | puts the full meter on the clipboard as text, to paste into a ticket or a chat |
 | `/show-meter reset` | counts from zero: run it just before a task you want to measure |
 | `/show-meter budget 20` | the cost bar is full at $20 (default $10); remembered across sessions |
 | `/show-meter hide`, `/show-meter show` | hides or shows the line above the prompt |
@@ -58,6 +59,17 @@ Ctrl+X then Ctrl+A also collapses and restores the line above the prompt.
   of the model calls it made.
 
 The counts belong to one Claude Code session: a new session starts from zero.
+
+## How exact it is
+
+- **Exact:** the total cost (Claude Code's own running total: in a session where the meter was open from the start, it
+  equals `/usage`'s Total cost), the context window, the number of calls and each subagent's name and time. The token
+  count was checked against a session's own record: 13,211,406 tokens over 162 calls, against 13.2M on the meter.
+- **About (≈):** a subagent's own cost. The meter reads the session's total after each call and gives the increase to
+  the agent that made it; when subagents run at the same time, a call can land between another's readings, so the
+  split between them can shift by a few cents. The total across them stays right.
+- **Can be a little lower than `/usage`:** the token count. Claude Code's own background calls (compaction, prompt
+  suggestions) are in the cost but may not reach the token count.
 
 ## Requirements
 

@@ -32,8 +32,8 @@ test("the full meter: a header, a row each, and a line per subagent, newest firs
       "context  ●●●○○○○○○○  30% 60k of 200k window",
       "calls                41 to the model",
       "agents               3 run · 610k tokens, $1.71 in all",
-      "         verifier                1m 35s   400k tokens  $1.10",
-      "         architect                  47s   210k tokens  $0.61",
+      "         verifier                1m 35s   400k tokens  ≈$1.10",
+      "         architect                  47s   210k tokens  ≈$0.61",
     ].join("\n"),
   );
 });
@@ -70,6 +70,17 @@ test("the short forms keep a few words per row, with no bars, so they never wrap
 test("a running subagent comes first, with what it has used so far", async () => {
   const running = { a1: "security-reviewer" };
   const text = meter({ ...base, running, agentTokens: { a1: 80_000 }, agentUsd: { a1: 0.03 } });
-  expect(text).toContain("security-reviewer      running    80k tokens  $0.03\n");
+  expect(text).toContain("security-reviewer      running    80k tokens  ≈$0.03\n");
   expect(text).toContain("690k tokens, $1.74 in all");
+});
+
+test("a subagent's cost under a cent reads <$0.01, never $0.00", async () => {
+  const finished = [{ type: "git", ms: 17_000, tokens: 43_000, usd: 0.004 }];
+  const text = meter({ ...base, finished });
+  expect(text).toContain("17s    43k tokens  <$0.01");
+  expect(text).toContain("43k tokens, <$0.01 in all");
+});
+
+test("the time is read at the moment of drawing, not at the last call", async () => {
+  expect(meter(base, 10, "one", undefined, 1_200_000)).toContain("⏱ 20m 00s");
 });

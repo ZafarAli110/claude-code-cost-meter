@@ -3,7 +3,7 @@
 // model calls, and the subagents: which are running now, how many have run, and the last one's time and tokens.
 // Counts the main loop and every subagent. The cost is the session's own estimate at list price, as /usage shows it.
 import { atom, read, update } from "claude-code";
-import type { Color, EngineInterface, Register } from "claude-code";
+import type { Color, EngineInterface, Register, RenderSurface, Timer } from "claude-code";
 
 import type { Meter } from "../types";
 
@@ -80,10 +80,10 @@ export type Context = { tokens?: number; window: number; percent?: number };
 /** The header row: the time since the reset, and what is running now. */
 export type Header = { time: string; now: string; isAgent: boolean };
 
-export function header(m: Meter): Header {
+export function header(m: Meter, now = m.updatedAt): Header {
   const agents = Object.values(m.running);
   return {
-    time: elapsed(m.updatedAt - m.startedAt),
+    time: elapsed(now - m.startedAt),
     now: agents.length > 0 ? agents.join(", ") : "main",
     isAgent: agents.length > 0,
   };
@@ -136,7 +136,10 @@ export function rows(m: Meter, budgetUsd: number, context?: Context): Row[] {
       bar: NO_BAR,
       value: String(m.agentsRun),
       valueColor: "success",
-      detail: m.agentsRun === 0 ? "run" : `run · ${tokens(spent.tokens)} tokens, $${spent.usd.toFixed(2)} in all`,
+      detail:
+        m.agentsRun === 0
+          ? "run"
+          : `run · ${tokens(spent.tokens)} tokens, ${spent.usd < 0.005 ? "<$0.01" : `$${spent.usd.toFixed(2)}`} in all`,
       brief: `${m.agentsRun} agents`,
     },
   ];
@@ -163,8 +166,13 @@ export function agentLines(m: Meter): AgentLine[] {
   return [...running, ...done];
 }
 
+/** A subagent's cost: about, since parallel subagents' calls can land in each other's readings; never a bare $0.00. */
+function about(usd: number): string {
+  return usd < 0.005 ? "<$0.01" : `≈$${usd.toFixed(2)}`;
+}
+
 function agentText(line: AgentLine): string {
-  return `${line.name.padEnd(22)} ${line.time.padStart(7)}  ${tokens(line.tokens).padStart(5)} tokens  $${line.usd.toFixed(2)}`;
+  return `${line.name.padEnd(22)} ${line.time.padStart(7)}  ${tokens(line.tokens).padStart(5)} tokens  ${about(line.usd)}`;
 }
 
 /** The meter's three shapes: every row, or a header and one line, or one line. */
@@ -183,8 +191,8 @@ export function layout(maxRows: number, m: Meter): Mode {
 }
 
 /** The meter as plain text: what the tests read, and the shape the band draws. */
-export function describe(m: Meter, budgetUsd = 10, mode: Mode = "full", context?: Context): string {
-  const top = header(m);
+export function describe(m: Meter, budgetUsd = 10, mode: Mode = "full", context?: Context, now = m.updatedAt): string {
+  const top = header(m, now);
   const head = `cost meter │ ⏱ ${top.time} │ ⚙ ${top.now}`;
   const all = rows(m, budgetUsd, context);
   if (mode === "full") {
@@ -202,7 +210,8 @@ export function describe(m: Meter, budgetUsd = 10, mode: Mode = "full", context?
 /** The meter as an element tree: the full rows, or two lines, or one, drawn with the surface's own elements. */
 export async function draw($: EngineInterface, ui: Elements, m: Meter, mode: Mode) {
   const budgetUsd = await read($, budget);
-  const top = header(m);
+  // The clock is read at every draw, and a timer redraws once a second, so the time never looks frozen.
+  const top = header(m, await $.clock.now());
   const all = rows(m, budgetUsd, (await $.session.usage()).context);
   const { Box, Text } = ui;
   const separator = (key: string) => (
@@ -271,12 +280,27 @@ export async function draw($: EngineInterface, ui: Elements, m: Meter, mode: Mod
   );
 }
 
+/** The full meter as text, on the clipboard: for a meter taller than its panel, or to paste into a ticket or a chat. */
+export async function copyMeter($: EngineInterface, surface?: RenderSurface): Promise<boolean> {
+  const m = await read($, meter);
+  if (m === null) {
+    return false;
+  }
+  const text = describe(m, await read($, budget), "full", (await $.session.usage()).context, await $.clock.now());
+  return (await $.ui.copy(surface === undefined ? { text } : { text, surface })).isCopied;
+}
+
+let tick: Timer | undefined;
+
 export const register: Register = (on) => {
   on("session.start", async ($, e, next) => {
+    // Redraw once a second so the time ticks; a reload starts a new timer and stops the old one.
+    tick?.cancel();
+    tick = $.clock.every(1000, () => $.ui.invalidate("ui.render"));
     await $.command.register({
       name: COMMAND,
       description:
-        "Open the cost meter beside the chat; `reset` counts from zero; `budget <dollars>`; `hide` or `show` the band",
+        "Open the cost meter beside the chat; `copy` puts it on the clipboard; `reset`; `budget <dollars>`; `hide` or `show`",
     });
     if ((await read($, meter)) === null) {
       const started = await fresh($);
@@ -309,6 +333,10 @@ export const register: Register = (on) => {
         await update($, budget, () => dollars);
         await $.store.set("budget", dollars);
         return { text: `Cost meter budget: $${dollars.toFixed(2)}.` };
+      }
+      if (word === "copy") {
+        const isCopied = await copyMeter($);
+        return { text: isCopied ? "Cost meter copied: paste it anywhere." : "Could not reach the clipboard here." };
       }
       if (word === "reset") {
         const started = await fresh($);
@@ -419,6 +447,14 @@ export const register: Register = (on) => {
     if (m === null) {
       return <ui.Text dimColor>Nothing counted yet.</ui.Text>;
     }
-    return draw($, ui, m, "full");
+    const { Box, Button } = ui;
+    return (
+      <Box flexDirection="column">
+        <Box>
+          <Button key="copy" label="Copy" onPress={(press) => copyMeter($, press.surface)} />
+        </Box>
+        {await draw($, ui, m, "full")}
+      </Box>
+    );
   });
 };
