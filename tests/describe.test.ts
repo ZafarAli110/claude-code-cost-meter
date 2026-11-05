@@ -84,3 +84,7 @@ test("a subagent's cost under a cent reads <$0.01, never $0.00", async () => {
 test("the time is read at the moment of drawing, not at the last call", async () => {
   expect(meter(base, 10, "one", undefined, 1_200_000)).toContain("⏱ 20m 00s");
 });
+
+test("past an hour the time reads in hours and minutes", async () => {
+  expect(meter(base, 10, "one", undefined, 31_250_000)).toContain("⏱ 8h 40m");
+});
