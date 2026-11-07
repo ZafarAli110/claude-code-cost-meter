@@ -19,6 +19,9 @@ const KEPT_AGENTS = 20;
 const meter = atom({ plugin: "cost-meter", key: "meter" } as const, null, { shape: "meter-4" });
 const isHidden = atom({ plugin: "cost-meter", key: "isHidden" } as const, false);
 const budget = atom({ plugin: "cost-meter", key: "budget" } as const, 10);
+/** True for a moment after the panel's Copy button copied the meter, so the button can say so. */
+const isJustCopied = atom({ plugin: "cost-meter", key: "isJustCopied" } as const, false);
+const COPIED_MS = 2000;
 
 async function sessionUsd($: EngineInterface): Promise<number> {
   return (await $.session.usage()).cost?.usd ?? 0;
@@ -311,6 +314,21 @@ export async function copyMeter($: EngineInterface, surface?: RenderSurface): Pr
   return (await $.ui.copy(surface === undefined ? { text } : { text, surface })).isCopied;
 }
 
+/**
+ * The panel's Copy button: copies the meter, then says so twice, as a toast and on the button itself for a moment, so
+ * a press never looks like nothing happened.
+ */
+async function copyFromPanel($: EngineInterface, surface: RenderSurface): Promise<void> {
+  const isCopied = await copyMeter($, surface);
+  $.ui.toast(isCopied ? "Cost meter copied: paste it anywhere." : "Could not reach the clipboard here.");
+  if (!isCopied) {
+    return;
+  }
+  await update($, isJustCopied, () => true);
+  await $.clock.sleep(COPIED_MS);
+  await update($, isJustCopied, () => false);
+}
+
 /** What every word of the command does: printed when the panel opens, and for a word it does not know. */
 const USAGE = [
   `/${COMMAND} panel      the full meter beside the chat (/${COMMAND} alone does the same)`,
@@ -500,10 +518,11 @@ export const register: Register = (on) => {
       return <ui.Text>Nothing counted yet: the meter starts with your next prompt.</ui.Text>;
     }
     const { Box, Button } = ui;
+    const label = (await read($, isJustCopied)) ? "Copied ✓" : "Copy";
     return (
       <Box flexDirection="column">
         <Box>
-          <Button key="copy" label="Copy" onPress={(press) => copyMeter($, press.surface)} />
+          <Button key="copy" label={label} onPress={(press) => copyFromPanel($, press.surface)} />
         </Box>
         {await draw($, ui, m, "full")}
       </Box>

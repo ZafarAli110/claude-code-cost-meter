@@ -1,6 +1,6 @@
 {
   "name": "cost-meter",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Live cost, tokens, context window, model calls and every subagent's time and cost, beside the chat and above the prompt",
   "author": { "name": "Zafar Ali" },
   "license": "MIT",

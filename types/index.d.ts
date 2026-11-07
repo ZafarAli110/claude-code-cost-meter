@@ -31,6 +31,6 @@ export type Meter = {
 
 declare module "claude-code" {
   interface PluginState {
-    "cost-meter": { meter: Shaped<Meter | null>; isHidden: boolean; budget: number };
+    "cost-meter": { meter: Shaped<Meter | null>; isHidden: boolean; budget: number; isJustCopied: boolean };
   }
 }
