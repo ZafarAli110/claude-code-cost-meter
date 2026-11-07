@@ -24,6 +24,24 @@ async function sessionUsd($: EngineInterface): Promise<number> {
   return (await $.session.usage()).cost?.usd ?? 0;
 }
 
+/**
+ * The meter to count on, made when there is none: at the session's start, and again after a /clear. A /clear starts a
+ * new session, whose state is empty, and fires no `session.start` for it: the first prompt, model call, subagent or
+ * /show-meter that follows starts the meter again, from zero, with the budget kept in the store.
+ */
+async function ensureMeter($: EngineInterface): Promise<void> {
+  if ((await read($, meter)) !== null) {
+    return;
+  }
+  const started = await fresh($);
+  await update($, meter, (m) => m ?? started);
+  // The budget outlives the session: set it once, and every later session starts with it.
+  const saved = Number(await $.store.get("budget"));
+  if (saved > 0) {
+    await update($, budget, () => saved);
+  }
+}
+
 async function fresh($: EngineInterface): Promise<Meter> {
   const now = await $.clock.now();
   const usd = await sessionUsd($);
@@ -321,20 +339,13 @@ export const register: Register = (on) => {
         "Cost meter: `panel` opens it beside the chat; `hide`/`show` the line above the prompt; `copy`; `reset`; `budget <dollars>`",
       argumentHint: "[panel | hide | show | copy | reset | budget <dollars>]",
     });
-    if ((await read($, meter)) === null) {
-      const started = await fresh($);
-      await update($, meter, () => started);
-    }
-    // The budget outlives the session: set it once, and every later session starts with it.
-    const saved = Number(await $.store.get("budget"));
-    if (saved > 0) {
-      await update($, budget, () => saved);
-    }
+    await ensureMeter($);
     return next(e);
   });
 
   on("command.run", { command: COMMAND }, async ($, e) => {
     try {
+      await ensureMeter($);
       const [word = "", amount = ""] = e.args.trim().toLowerCase().split(/\s+/);
       if (word === "hide" || word === "show") {
         await update($, isHidden, () => word === "hide");
@@ -379,6 +390,7 @@ export const register: Register = (on) => {
     // The meter never stands in a model call's way: a failure here leaves the result as it was.
     if (usage) {
       try {
+        await ensureMeter($);
         const spent =
           usage.input_tokens + usage.output_tokens + usage.cache_read_input_tokens + usage.cache_creation_input_tokens;
         const agentId = e.agentId;
@@ -420,6 +432,7 @@ export const register: Register = (on) => {
     // The meter never stands in a subagent's way: a failure here leaves the spawn as it was.
     if (agentId) {
       try {
+        await ensureMeter($);
         await update($, meter, (m) =>
           m === null ? m : { ...m, agentsRun: m.agentsRun + 1, running: { ...m.running, [agentId]: e.subagentType } },
         );
@@ -434,6 +447,11 @@ export const register: Register = (on) => {
   on("turn.start", async ($, e, next) => {
     if (!e.agentId) {
       isWorking = true;
+      try {
+        await ensureMeter($);
+      } catch {
+        // Counted wrong, never blocked.
+      }
     }
     return next(e);
   });
@@ -479,7 +497,7 @@ export const register: Register = (on) => {
     const m = await read($, meter);
     const ui = $.ui.resolve(e);
     if (m === null) {
-      return <ui.Text dimColor>Nothing counted yet.</ui.Text>;
+      return <ui.Text>Nothing counted yet: the meter starts with your next prompt.</ui.Text>;
     }
     const { Box, Button } = ui;
     return (

@@ -75,7 +75,7 @@ also takes the plugin out of that project's `.claude/settings.json`. To forget t
 | --- | --- |
 | `/show-meter panel` | opens the full meter in a panel beside the chat, with a **Copy** button at the top (`/show-meter` alone does the same) |
 | `/show-meter copy` | puts the full meter on the clipboard as text, to paste into a ticket or a chat |
-| `/show-meter reset` | counts from zero: run it just before a task you want to measure |
+| `/show-meter reset` | counts from zero: run it just before a task you want to measure. A `/clear` starts a new session, and the meter starts again from zero with it |
 | `/show-meter budget 20` | the cost bar is full at $20 (default $10); remembered across sessions |
 | `/show-meter hide`, `/show-meter show` | hides or shows the line above the prompt |
 
